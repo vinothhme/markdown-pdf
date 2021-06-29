@@ -21,6 +21,7 @@
   "homepage": "https://github.com/alanshaw/markdown-pdf",
   "license": "MIT",
   "dependencies": {
+    "buffer-replace": "^1.0.0",
     "commander": "^3.0.0",
     "duplexer": "^0.1.1",
     "extend": "^3.0.2",

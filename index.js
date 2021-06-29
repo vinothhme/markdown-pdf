@@ -16,6 +16,7 @@ function markdownpdf (opts) {
   opts.cwd = opts.cwd ? path.resolve(opts.cwd) : process.cwd()
   opts.phantomPath = opts.phantomPath || require('phantomjs-prebuilt').path
   opts.runningsPath = opts.runningsPath ? path.resolve(opts.runningsPath) : path.join(__dirname, 'runnings.js')
+  opts.jsonPath = opts.jsonPath ? path.resolve(opts.jsonPath) : path.join(__dirname, 'options.json')
   opts.cssPath = opts.cssPath ? path.resolve(opts.cssPath) : path.join(__dirname, 'css', 'pdf.css')
   opts.highlightCssPath = opts.highlightCssPath ? path.resolve(opts.highlightCssPath) : path.join(__dirname, 'css', 'highlight.css')
   opts.paperFormat = opts.paperFormat || 'A4'
@@ -105,6 +106,7 @@ function markdownpdf (opts) {
           tmpPdfPath,
           opts.cwd,
           opts.runningsPath,
+          opts.jsonPath,
           opts.cssPath,
           opts.highlightCssPath,
           opts.paperFormat,

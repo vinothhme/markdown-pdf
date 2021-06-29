@@ -2,9 +2,10 @@ var system = require('system')
 var page = require('webpage').create()
 var fs = require('fs')
 var os = require('system').os
+const replace = require('buffer-replace');
 
 // Read in arguments
-var args = ['in', 'out', 'cwd', 'runningsPath', 'cssPath', 'highlightCssPath', 'paperFormat', 'paperOrientation', 'paperBorder', 'renderDelay', 'loadTimeout'].reduce(function (args, name, i) {
+var args = ['in', 'out', 'cwd', 'runningsPath', 'jsonPath', 'cssPath', 'highlightCssPath', 'paperFormat', 'paperOrientation', 'paperBorder', 'renderDelay', 'loadTimeout'].reduce(function (args, name, i) {
   args[name] = system.args[i + 1]
   return args
 }, {})
@@ -56,28 +57,56 @@ function render () {
   page.close()
   window.phantom.exit(0)
 }
+var runnings = require(args.runningsPath)
+
+function preProcessHeader(pageNum, numPages) {
+  var contents = runnings['header'].contents(pageNum, numPages)
+  var config = JSON.parse(fs.readFileSync(args.jsonPath, 'utf8'));
+
+  for (const [ key, value ] of Object.entries(config)) {
+    contents = replace(contents,`{{${key}}}`, value);
+  }
+  return contents;
+}
+
+function preProcessHeader(pageNum, numPages) {
+  var contents = runnings['header'].contents(pageNum, numPages)
+  var config = JSON.parse(fs.readFileSync(args.jsonPath, 'utf8'));
+
+  for (const [ key, value ] of Object.entries(config)) {
+    contents = replace(contents,`{{${key}}}`, value);
+  }
+  return contents;
+}
+
+function preProcessFooter(pageNum, numPages) {
+  var contents = runnings['footer'].contents(pageNum, numPages)
+  var config = JSON.parse(fs.readFileSync(args.jsonPath, 'utf8'));
+
+  for (const [ key, value ] of Object.entries(config)) {
+    contents = replace(contents,`{{${key}}}`, value);
+  }
+  return contents;
+}
 
 function paperSize (runningsPath, obj) {
-  var runnings = require(runningsPath)
-
-  // encapsulate .contents into phantom.callback()
-  //   Why does phantomjs not support Array.prototype.forEach?!
-  var keys = ['header', 'footer']
-
-  for (var i = 0; i < keys.length; i++) {
-    var which = keys[i]
-
-    if (runnings[which] && runnings[which].contents && typeof runnings[which].contents === 'function') {
-      obj[which] = {
-        contents: window.phantom.callback(runnings[which].contents)
-      }
-
-      if (runnings[which].height) {
-        obj[which].height = runnings[which].height
-      }
+  
+  if (runnings['header'] && runnings['header'].contents && typeof runnings['header'].contents === 'function'){
+    obj['header'] = {
+      contents: window.phantom.callback(preProcessHeader)
+    }
+    if (runnings['header'].height) {
+      obj['header'].height = runnings['header'].height
     }
   }
-
+  if (runnings['footer'] && runnings['footer'].contents && typeof runnings['footer'].contents === 'function'){
+    obj['footer'] = {
+      contents: window.phantom.callback(preProcessFooter)
+    }
+    if (runnings['footer'].height) {
+      obj['footer'].height = runnings['footer'].height
+    }
+  }
   return obj
 }
 
