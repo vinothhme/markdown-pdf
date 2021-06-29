@@ -2,7 +2,6 @@ var system = require('system')
 var page = require('webpage').create()
 var fs = require('fs')
 var os = require('system').os
-const replace = require('buffer-replace');
 
 // Read in arguments
 var args = ['in', 'out', 'cwd', 'runningsPath', 'jsonPath', 'cssPath', 'highlightCssPath', 'paperFormat', 'paperOrientation', 'paperBorder', 'renderDelay', 'loadTimeout'].reduce(function (args, name, i) {
@@ -57,56 +56,34 @@ function render () {
   page.close()
   window.phantom.exit(0)
 }
-var runnings = require(args.runningsPath)
 
-function preProcessHeader(pageNum, numPages) {
-  var contents = runnings['header'].contents(pageNum, numPages)
-  var config = JSON.parse(fs.readFileSync(args.jsonPath, 'utf8'));
-
-  for (const [ key, value ] of Object.entries(config)) {
-    contents = replace(contents,`{{${key}}}`, value);
-  }
-  return contents;
-}
-
-function preProcessHeader(pageNum, numPages) {
-  var contents = runnings['header'].contents(pageNum, numPages)
-  var config = JSON.parse(fs.readFileSync(args.jsonPath, 'utf8'));
-
-  for (const [ key, value ] of Object.entries(config)) {
-    contents = replace(contents,`{{${key}}}`, value);
-  }
-  return contents;
-}
-
-function preProcessFooter(pageNum, numPages) {
-  var contents = runnings['footer'].contents(pageNum, numPages)
-  var config = JSON.parse(fs.readFileSync(args.jsonPath, 'utf8'));
-
-  for (const [ key, value ] of Object.entries(config)) {
-    contents = replace(contents,`{{${key}}}`, value);
-  }
-  return contents;
-}
 
 function paperSize (runningsPath, obj) {
-  
-  if (runnings['header'] && runnings['header'].contents && typeof runnings['header'].contents === 'function'){
-    obj['header'] = {
-      contents: window.phantom.callback(preProcessHeader)
-    }
-    if (runnings['header'].height) {
-      obj['header'].height = runnings['header'].height
+  var runnings = require(runningsPath)
+  var config = JSON.parse(fs.read(args.jsonPath, 'utf8'));
+
+  // encapsulate .contents into phantom.callback()
+  //   Why does phantomjs not support Array.prototype.forEach?!
+  var keys = ['header', 'footer']
+
+  for (var i = 0; i < keys.length; i++) {
+    var which = keys[i]
+
+    if (runnings[which] && runnings[which].contents && runnings[which].contents_fn) {
+      var data = runnings[which].contents
+      for (var key in config) {
+        data = data.replace('{{'+key+'}}', config[key])
+      }
+
+      obj[which] = {
+        contents: window.phantom.callback(new Function('pageNum, numPages', runnings[which].contents_fn.replace("{{data}}", data)))
+      }
+      if (runnings[which].height) {
+        obj[which].height = runnings[which].height
+      }
     }
   }
-  if (runnings['footer'] && runnings['footer'].contents && typeof runnings['footer'].contents === 'function'){
-    obj['footer'] = {
-      contents: window.phantom.callback(preProcessFooter)
-    }
-    if (runnings['footer'].height) {
-      obj['footer'].height = runnings['footer'].height
-    }
-  }
+
   return obj
 }
 
